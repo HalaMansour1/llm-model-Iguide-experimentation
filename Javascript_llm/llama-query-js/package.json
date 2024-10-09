@@ -1,0 +1,13 @@
+{
+  "name": "llama-query-js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "js_implementation.js",
+  "type": "module",
+  "scripts": {
+    "start": "node js_implementation.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

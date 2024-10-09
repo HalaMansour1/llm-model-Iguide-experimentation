@@ -1,0 +1,72 @@
+import fetch from 'node-fetch';
+import readline from 'readline';
+
+const systemMessage = "You are an AI assistant for retrieving knowledge elements from the I-GUIDE platform.";
+
+// using SIMULATED SEARCH results until we connect to openseach api , (simulated results)
+const predefinedSearchResults = [
+  "Cyberinfrastructure integrates distributed information and communication technologies...",
+  "Shaowen Wang is the leading researcher in CyberGIS...",
+  "A CyberGIS framework for the synthesis of Cyberinfrastructure, GIS, and Spatial Analysis...",
+  "The rise in reported maternal mortality rates in the US is largely due to a change in measurement..."
+];
+
+// function to then send this query to llama 
+async function callLlamaModel(queryPayload) {
+  const llamaAPIUrl = "http://127.0.0.1:1234/v1/chat/completions";  // this url can change depending on how you are running llm server 
+  try {
+    const response = await fetch(llamaAPIUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(queryPayload)
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching from Llama model:", error);
+    return null;
+  }
+}
+
+//construct payload with our mock results 
+function constructQuery(userQuery, searchResults) {
+  return {
+    model: "llama3.1",
+    messages: [
+      { role: "system", content: systemMessage },
+      { role: "user", content: userQuery },
+      ...searchResults.map((result, index) => ({
+        role: "user", content: `SEARCH RESULT ${index + 1}: ${result}`
+      }))
+    ],
+    temperature: 0.7  
+  };
+}
+
+const rl = readline.createInterface({
+  input: process.stdin,  // this captures users input 
+  output: process.stdout
+});
+
+// takes in input and processes query 
+function handleUserInput() {
+  rl.question('Enter the user query (or type "exit" to quit): ', async (userQuery) => {
+    if (userQuery.toLowerCase() === 'exit') {
+      console.log('Exiting...');
+      rl.close();
+      return;
+    }
+    // make the query with the predefined search results from (OpenSearch) and my own query entry 
+    const queryPayload = constructQuery(userQuery, predefinedSearchResults);
+    const llamaResponse = await callLlamaModel(queryPayload); // sending to llama 
+
+    if (llamaResponse && llamaResponse.choices && llamaResponse.choices.length > 0) {
+      const messageContent = llamaResponse.choices[0].message.content;
+      console.log("Llama Model Response:", messageContent);
+    } else {
+      console.log("Unexpected response format or no choices available.");
+    }
+    handleUserInput();
+  });
+}
+
+handleUserInput();
